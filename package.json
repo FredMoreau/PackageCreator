@@ -1,0 +1,22 @@
+{
+  "name": "com.unity.package-creator",
+  "displayName": "Package Creator",
+  "version": "0.0.1-preview.1",
+  "unity": "2021.3",
+  "description": "Editor tool to create packages.",
+  "author": {
+    "name": "Fred Moreau",
+    "email": "frederic.moreau@unity3d.com",
+    "url": "https://www.unity3d.com"
+  },
+  "keywords": [
+    "unity",
+    "editor",
+    "package"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:FredMoreau/PackageCreator.git"
+  },
+  "samples": []
+}
