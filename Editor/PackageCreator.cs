@@ -5,6 +5,10 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
+using UnityEditor.PackageManager.UI;
+using System;
+using UnityEngine.UIElements;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Unity.PackageCreator.Editor
 {
@@ -54,7 +58,8 @@ namespace Unity.PackageCreator.Editor
             public AuthorData author;
             public List<string> keywords = new List<string>() { "unity", "editor" };
             public RepositoryData repository;
-            public List<SampleData> samples;
+            public List<SampleData> samples = new List<SampleData>();
+            [HideInInspector] public bool hideInEditor;
         }
 
         [System.Serializable]
@@ -87,7 +92,7 @@ namespace Unity.PackageCreator.Editor
         SerializedObject serializedObject;
         SerializedProperty serializedProperty;
 
-        bool addReadMe = true, addRuntimeFolder = true, addEditorFolder = true, addDocumentationFolder = true;
+        bool addReadMe = true, addChangeLog = true, addRuntimeFolder = true, addEditorFolder = true, addDocumentationFolder = true;
         string asmDefBaseName = "Unity.CustomPackage";
 
         List<string> folders = new List<string>() { "Assets" };
@@ -97,7 +102,7 @@ namespace Unity.PackageCreator.Editor
         static AddRequest packManAddRequest;
 
         [MenuItem("Tools/Package Creator")]
-        static void Init()
+        public static void Init()
         {
             PackageCreator window = EditorWindow.GetWindow<PackageCreator>("Package Creator");
             window.titleContent = new GUIContent("Package Creator");
@@ -118,6 +123,7 @@ namespace Unity.PackageCreator.Editor
                 serializedObject.ApplyModifiedProperties();
 
             addReadMe = GUILayout.Toggle(addReadMe, "Add ReadMe");
+            addChangeLog = GUILayout.Toggle(addChangeLog, "Add ChangeLog");
             addRuntimeFolder = GUILayout.Toggle(addRuntimeFolder, "Add Runtime Folder");
             addEditorFolder = GUILayout.Toggle(addEditorFolder, "Add Editor Folder");
             if (addRuntimeFolder || addEditorFolder)
@@ -154,6 +160,20 @@ namespace Unity.PackageCreator.Editor
                 using (StreamWriter streamWriter = new StreamWriter(Path.Combine(targetDir, "README.md")))
                 {
                     streamWriter.Write($"# {packageData.displayName}\n{packageData.description}");
+                }
+            }
+
+            if (addChangeLog)
+            {
+                using (StreamWriter streamWriter = new StreamWriter(Path.Combine(targetDir, "CHANGELOG.md")))
+                {
+                    streamWriter.Write("# Changelog\n" +
+                        "All notable changes to this package will be documented in this file.\n\n" +
+                        "The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)\n" +
+                        "and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).\n\n" +
+                        $"## [{packageData.version}] - {DateTime.Now.ToString("yyyy-MM-dd")}\n\n" +
+                        $"### This is the first release of *Unity Package <{packageData.name}>*.\n\n" +
+                        "*Short description of this release*");
                 }
             }
 
@@ -197,6 +217,8 @@ namespace Unity.PackageCreator.Editor
             foreach (var dir in folders)
                 Directory.CreateDirectory(Path.Combine(targetDir, dir));
 
+            EditorUtility.RevealInFinder(Path.Combine(targetDir, "package.json"));
+
             if (addToProject)
             {
                 packManAddRequest = Client.Add($"file:{targetDir}");
@@ -210,18 +232,58 @@ namespace Unity.PackageCreator.Editor
             {
                 if (packManAddRequest.Status == StatusCode.Success)
                 {
-                    Debug.Log("Installed: " + packManAddRequest.Result.packageId);
+                    // UNDONE : too early, the package isn't visible yet in Project Window
+                    //EditorUtility.FocusProjectWindow();
+                    //var pkg = AssetDatabase.LoadMainAssetAtPath($"Packages/<{packManAddRequest.Result.displayName}>/package.json");
+                    //EditorGUIUtility.PingObject(pkg);
 
-                    var pkg = AssetDatabase.LoadMainAssetAtPath($"Packages/<{packManAddRequest.Result.displayName}>/package.json");
-                    EditorGUIUtility.PingObject(pkg);
+                    Window.Open(packManAddRequest.Result.displayName);
+                    //Selection.SetActiveObjectWithContext(pkg, pkg);
                 }
                 else if (packManAddRequest.Status >= StatusCode.Failure)
                 {
-                    Debug.Log(packManAddRequest.Error.message);
+                    Debug.LogWarning(packManAddRequest.Error.message);
                 }
 
                 EditorApplication.update -= Progress;
             }
         }
     }
+
+    //public class PacManExtension : IPackageManagerExtension
+    //{
+    //    PackageInfo packageInfo;
+
+    //    public VisualElement CreateExtensionUI()
+    //    {
+    //        var root = new VisualElement();
+
+    //        return root;
+    //    }
+
+    //    public void OnPackageAddedOrUpdated(PackageInfo packageInfo)
+    //    {
+            
+    //    }
+
+    //    public void OnPackageRemoved(PackageInfo packageInfo)
+    //    {
+            
+    //    }
+
+    //    public void OnPackageSelectionChange(PackageInfo packageInfo)
+    //    {
+    //        this.packageInfo = packageInfo;
+    //    }
+    //}
+
+    //public static class PacManExtensionInit
+    //{
+    //    [InitializeOnLoadMethod]
+    //    public static void Init()
+    //    {
+    //        PacManExtension pacManExtension = new PacManExtension();
+    //        PackageManagerExtensions.RegisterExtension(pacManExtension);
+    //    }
+    //}
 }
